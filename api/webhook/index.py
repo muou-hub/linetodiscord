@@ -1,2 +1,2 @@
 def tset(r1):
-    return True
+    return  json({'hello': 200})
