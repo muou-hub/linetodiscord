@@ -1,2 +1,2 @@
-def handler(request):
-    return ("Hello Vercel!", 200)
+def tset(r1):
+    return True
