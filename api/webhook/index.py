@@ -1,2 +1,2 @@
-def tset(r1):
-    return  json({'hello': 200})
+def handler(request):
+    return ("Hello Vercel!", 200)
