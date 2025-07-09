@@ -1,1 +1,2 @@
-    return ("Hello Vercel!", 200)
+def handler(request):
+return ("Hello Vercel!", 200)
