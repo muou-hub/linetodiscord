@@ -33,14 +33,14 @@ async function sendDiscordMessage(payload, isForm = false) {
       const text = await res.text();
       console.error(`Discord 發送失敗: ${res.status} - ${text}`);
     } else {
-      console.log("Discord 發送成功");
+      console.log("✅ Discord 發送成功");
     }
   } catch (e) {
-    console.error("Discord 發送錯誤:", e);
+    console.error("❌ Discord 發送錯誤:", e);
   }
 }
 
-app.post("/webhook", async (req, res) => {
+app.post("/api/webhook", async (req, res) => {
   try {
     const events = req.body.events;
     if (!events) {
@@ -50,12 +50,10 @@ app.post("/webhook", async (req, res) => {
     for (const event of events) {
       if (event.type === "message") {
         if (event.message.type === "text") {
-          console.log("收到文字:", event.message.text);
           await sendDiscordMessage(
             JSON.stringify({ content: `🔔[轉發] ${event.message.text}` })
           );
         } else if (event.message.type === "image") {
-          console.log("收到圖片，準備下載");
           const messageId = event.message.id;
           const stream = await client.getMessageContent(messageId);
           const chunks = [];
@@ -72,8 +70,6 @@ app.post("/webhook", async (req, res) => {
           );
 
           await sendDiscordMessage(form, true);
-        } else {
-          console.log("收到未支援的訊息類型:", event.message.type);
         }
       }
     }
@@ -84,7 +80,5 @@ app.post("/webhook", async (req, res) => {
   }
 });
 
-const port = process.env.PORT || 3000;
-app.listen(port, () => {
-  console.log(`LINE webhook server running on port ${port}`);
-});
+// 匯出給 Vercel 運行
+export default app;
