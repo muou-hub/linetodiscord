@@ -1,8 +1,7 @@
 {
   "name": "line-to-discord-bot",
   "version": "1.0.0",
-  "description": "LINE OA webhook to Discord  bot",
-  "main": "api/webhook.js",
+  "description": "A serverless LINE OA to Discord message forwarder",
   "type": "module",
   "scripts": {
     "start": "node api/webhook.js"
