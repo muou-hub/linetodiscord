@@ -12,7 +12,7 @@ export default async function handler(req, res) {
 
     for (const event of events) {
       if (event.type === 'message' && event.message.type === 'text') {
-        const content = `[轉發] ${event.message.text}`;
+        const content = `🔔[轉發] ${event.message.text}`;
         console.log("📤 發送到 Discord：", content);
 
         const response = await fetch(DISCORD_WEBHOOK_URL, {
