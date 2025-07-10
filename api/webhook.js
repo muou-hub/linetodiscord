@@ -1,14 +1,14 @@
 import express from "express";
-import { middleware, Client, MessageAPIResponseBase } from "@line/bot-sdk";
+import { middleware, Client } from "@line/bot-sdk";
 import fetch from "node-fetch";
 import FormData from "form-data";
 
 const config = {
-  channelAccessToken: "F1xs4queDPDV2gxRyWSs0HjqQaMmZRJTklFBt/TnmMPIdNAUJ6E3Tkxi5xsuUgq3rJ27VjYhje56zaGqHEheB5LEXTjgSbSCAvsIBslEmTtspuJ59HUk+pdZF5RZqG9j5JaqF/lfJyLDd72Bkku0iAdB04t89/1O/w1cDnyilFU=",
-  channelSecret: "e399030b9cfa05d2571a220f4cfac375",
+  channelAccessToken: process.env.LINE_CHANNEL_ACCESS_TOKEN,
+  channelSecret: process.env.LINE_CHANNEL_SECRET,
 };
 
-const discordWebhookURL = "https://discord.com/api/webhooks/1392570606783959150/PKn8bECItnaFWk3TD_pWtse0Gn3PB17zVp_CzZoNSDaCsbU_2QmMyBeiAuEP1Hj5hJ0C";
+const discordWebhookURL = process.env.DISCORD_WEBHOOK_URL;
 
 const app = express();
 app.use(express.json());
@@ -16,41 +16,56 @@ app.use(middleware(config));
 
 const client = new Client(config);
 
+async function sendToDiscord(content, fileBuffer = null, filename = null) {
+  if (fileBuffer && filename) {
+    const form = new FormData();
+    form.append("file", fileBuffer, { filename });
+    form.append("content", content);
+
+    const res = await fetch(discordWebhookURL, {
+      method: "POST",
+      body: form,
+      headers: form.getHeaders(),
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      console.error("Discord upload failed:", res.status, text);
+    }
+  } else {
+    const res = await fetch(discordWebhookURL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ content }),
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      console.error("Discord message failed:", res.status, text);
+    }
+  }
+}
+
 app.post("/webhook", async (req, res) => {
   try {
     const events = req.body.events;
     for (const event of events) {
       if (event.type === "message") {
         if (event.message.type === "text") {
-          // 文字訊息直接發Discord
-          await fetch(discordWebhookURL, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              content: `[LINE OA] ${event.message.text}`,
-            }),
-          });
+          await sendToDiscord(`🔔[轉發] ${event.message.text}`);
         } else if (event.message.type === "image") {
-          // 圖片訊息先下載，再發給Discord
           const messageId = event.message.id;
           const stream = await client.getMessageContent(messageId);
-          // 用 buffer 存取圖片
+
           const chunks = [];
           for await (const chunk of stream) {
             chunks.push(chunk);
           }
           const buffer = Buffer.concat(chunks);
 
-          // 準備 FormData 上傳圖片到 Discord Webhook
-          const form = new FormData();
-          form.append("file", buffer, { filename: "image.jpg" });
-          form.append("content", `[LINE OA] 收到一張圖片，來自 userId: ${event.source.userId}`);
-
-          await fetch(discordWebhookURL, {
-            method: "POST",
-            body: form,
-            headers: form.getHeaders(),
-          });
+          await sendToDiscord(
+            `🔔[轉發] ${event.source.userId}`,
+            buffer,
+            "image.jpg"
+          );
         }
       }
     }
