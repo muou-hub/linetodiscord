@@ -1,36 +1,67 @@
-export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    return res.status(405).send('Only POST allowed');
-  }
+import express from "express";
+import { middleware, Client, MessageAPIResponseBase } from "@line/bot-sdk";
+import fetch from "node-fetch";
+import FormData from "form-data";
 
-  const DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1392570606783959150/PKn8bECItnaFWk3TD_pWtse0Gn3PB17zVp_CzZoNSDaCsbU_2QmMyBeiAuEP1Hj5hJ0C";
+const config = {
+  channelAccessToken: "F1xs4queDPDV2gxRyWSs0HjqQaMmZRJTklFBt/TnmMPIdNAUJ6E3Tkxi5xsuUgq3rJ27VjYhje56zaGqHEheB5LEXTjgSbSCAvsIBslEmTtspuJ59HUk+pdZF5RZqG9j5JaqF/lfJyLDd72Bkku0iAdB04t89/1O/w1cDnyilFU=",
+  channelSecret: "e399030b9cfa05d2571a220f4cfac375",
+};
 
+const discordWebhookURL = "https://discord.com/api/webhooks/1392570606783959150/PKn8bECItnaFWk3TD_pWtse0Gn3PB17zVp_CzZoNSDaCsbU_2QmMyBeiAuEP1Hj5hJ0C";
+
+const app = express();
+app.use(express.json());
+app.use(middleware(config));
+
+const client = new Client(config);
+
+app.post("/webhook", async (req, res) => {
   try {
-    console.log("📩 收到 LINE Webhook：", JSON.stringify(req.body, null, 2));
-
-    const events = req.body.events || [];
-
+    const events = req.body.events;
     for (const event of events) {
-      if (event.type === 'message' && event.message.type === 'text') {
-        const content = `🔔[轉發] ${event.message.text}`;
-        console.log("📤 發送到 Discord：", content);
+      if (event.type === "message") {
+        if (event.message.type === "text") {
+          // 文字訊息直接發Discord
+          await fetch(discordWebhookURL, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              content: `[LINE OA] ${event.message.text}`,
+            }),
+          });
+        } else if (event.message.type === "image") {
+          // 圖片訊息先下載，再發給Discord
+          const messageId = event.message.id;
+          const stream = await client.getMessageContent(messageId);
+          // 用 buffer 存取圖片
+          const chunks = [];
+          for await (const chunk of stream) {
+            chunks.push(chunk);
+          }
+          const buffer = Buffer.concat(chunks);
 
-        const response = await fetch(DISCORD_WEBHOOK_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ content }),
-        });
+          // 準備 FormData 上傳圖片到 Discord Webhook
+          const form = new FormData();
+          form.append("file", buffer, { filename: "image.jpg" });
+          form.append("content", `[LINE OA] 收到一張圖片，來自 userId: ${event.source.userId}`);
 
-        const result = await response.text();
-        console.log("✅ Discord 回應：", result);
-      } else {
-        console.log("⛔ 非文字訊息，已略過");
+          await fetch(discordWebhookURL, {
+            method: "POST",
+            body: form,
+            headers: form.getHeaders(),
+          });
+        }
       }
     }
-
-    return res.status(200).send('OK');
+    res.status(200).send("OK");
   } catch (err) {
-    console.error("❌ 發送失敗：", err);
-    return res.status(500).send('Internal Server Error');
+    console.error(err);
+    res.status(500).send("Error");
   }
-}
+});
+
+const port = process.env.PORT || 3000;
+app.listen(port, () => {
+  console.log(`LINE webhook server running at port ${port}`);
+});
