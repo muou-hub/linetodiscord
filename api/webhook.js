@@ -3,7 +3,7 @@ export default async function handler(req, res) {
     return res.status(405).send('Only POST allowed');
   }
 
-  const DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/你的ID/你的TOKEN"; // ← 請改成你自己的
+  const DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1392570606783959150/PKn8bECItnaFWk3TD_pWtse0Gn3PB17zVp_CzZoNSDaCsbU_2QmMyBeiAuEP1Hj5hJ0Chttps://discord.com/api/webhooks/1392570606783959150/PKn8bECItnaFWk3TD_pWtse0Gn3PB17zVp_CzZoNSDaCsbU_2QmMyBeiAuEP1Hj5hJ0C";
 
   try {
     console.log("📩 收到 LINE Webhook：", JSON.stringify(req.body, null, 2));
